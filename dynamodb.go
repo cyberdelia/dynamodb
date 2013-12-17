@@ -149,6 +149,77 @@ func Delete(tableName string, item interface{}) error {
 	return DefaultService.Delete(tableName, item)
 }
 
+// Creates table corresponding to the given item.
+func (s *Service) CreateTable(tableName string, item interface{}, read, write int) error {
+	definitions, err := attributeDefinitions(item)
+	if err != nil {
+		return err
+	}
+	schema, err := keySchema(item)
+	if err != nil {
+		return err
+	}
+	body := struct {
+		TableName             string
+		ProvisionedThroughput ProvisionedThroughput
+		AttributeDefinitions  AttributeDefinitions
+		KeySchema             KeySchema
+	}{
+		TableName: tableName,
+		ProvisionedThroughput: ProvisionedThroughput{
+			ReadCapacityUnits:  read,
+			WriteCapacityUnits: write,
+		},
+		AttributeDefinitions: definitions,
+		KeySchema:            schema,
+	}
+	return s.Do("CreateTable", body, nil)
+}
+
+// Creates table corresponding to the given item.
+func CreateTable(tableName string, item interface{}, read, write int) error {
+	return DefaultService.CreateTable(tableName, item, read, write)
+}
+
+// List existing tables.
+func (s *Service) ListTables() ([]string, error) {
+	var resp struct {
+		TableNames []string
+	}
+	err := s.Do("ListTables", new(struct{}), &resp)
+	if err != nil {
+		return nil, err
+	}
+	return resp.TableNames, nil
+}
+
+// List existing tables.
+func ListTables() ([]string, error) {
+	return DefaultService.ListTables()
+}
+
+// Describe given table.
+func (s *Service) DescribeTable(tableName string) (json.RawMessage, error) {
+	body := struct {
+		TableName string
+	}{
+		TableName: tableName,
+	}
+	var resp struct {
+		Table json.RawMessage
+	}
+	err := s.Do("DescribeTable", body, &resp)
+	if err != nil {
+		return nil, err
+	}
+	return resp.Table, nil
+}
+
+// Describe given table.
+func DescribeTable(tableName string) (json.RawMessage, error) {
+	return DefaultService.DescribeTable(tableName)
+}
+
 // Deletes the given table.
 func (s *Service) DeleteTable(tableName string) error {
 	body := struct {

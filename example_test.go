@@ -1,6 +1,7 @@
 package dynamodb_test
 
 import (
+	"fmt"
 	"github.com/cyberdelia/dynamodb"
 )
 
@@ -43,6 +44,21 @@ func ExampleDelete() {
 	if err != nil {
 		// ...
 	}
+}
+
+func ExampleCreateTable() {
+	err := dynamodb.CreateTable("papers", &Paper{}, 1, 1)
+	if err != nil {
+		// ...
+	}
+}
+
+func ExampleListTables() {
+	tables, err := dynamodb.ListTables()
+	if err != nil {
+		// ...
+	}
+	fmt.Println(tables)
 }
 
 func ExampleDeleteTable() {

@@ -20,6 +20,7 @@ var textUnmarshalerType = reflect.TypeOf(new(encoding.TextUnmarshaler)).Elem()
 
 type AttributeValue map[string]map[string]interface{}
 
+// Marshall struct into AttributeValue.
 func Marshal(v interface{}, keys bool) (AttributeValue, error) {
 	s := reflect.Indirect(reflect.ValueOf(v))
 	if s.Kind() != reflect.Struct {
@@ -136,6 +137,7 @@ func textMarshaler(v reflect.Value) (string, interface{}) {
 	return "S", string(b)
 }
 
+// Unmarshall AttributeValue into struct.
 func Unmarshal(a AttributeValue, v interface{}) error {
 	rv := reflect.ValueOf(v)
 	if rv.Kind() != reflect.Ptr || rv.IsNil() {
