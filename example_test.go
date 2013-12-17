@@ -18,7 +18,7 @@ func ExampleGet() {
 	}
 	err := dynamodb.Get("papers", paper)
 	if err != nil {
-		//...
+		// ...
 	}
 }
 
@@ -41,6 +41,13 @@ func ExampleDelete() {
 	}
 	err := dynamodb.Delete("papers", paper)
 	if err != nil {
-		//...
+		// ...
+	}
+}
+
+func ExampleDeleteTable() {
+	err := dynamodb.DeleteTable("papers")
+	if err != nil {
+		// ...
 	}
 }

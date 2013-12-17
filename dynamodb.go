@@ -107,7 +107,7 @@ func Get(tablename string, item interface{}) error {
 	return DefaultService.Get(tablename, item)
 }
 
-// Create or update the item in the given table.
+// Create or replace the item in the given table.
 func (s *Service) Put(tablename string, item interface{}) error {
 	values, err := marshall(item, false)
 	if err != nil {
@@ -123,7 +123,7 @@ func (s *Service) Put(tablename string, item interface{}) error {
 	return s.Do("PutItem", body, nil)
 }
 
-// Create or update the item in the given table.
+// Create or replace the item in the given table.
 func Put(tablename string, item interface{}) error {
 	return DefaultService.Put(tablename, item)
 }
@@ -147,4 +147,19 @@ func (s *Service) Delete(tablename string, item interface{}) error {
 // Deletes corresponding item in the given table.
 func Delete(tablename string, item interface{}) error {
 	return DefaultService.Delete(tablename, item)
+}
+
+// Deletes the given table.
+func (s *Service) DeleteTable(tablename string) error {
+	body := struct {
+		TableName string
+	}{
+		TableName: tablename,
+	}
+	return s.Do("DeleteTable", body, nil)
+}
+
+// Deletes the given table.
+func DeleteTable(tablename string) error {
+	return DefaultService.DeleteTable(tablename)
 }
