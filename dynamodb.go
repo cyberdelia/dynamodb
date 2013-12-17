@@ -1,3 +1,24 @@
+// An intelligible dynamodb client
+//
+// This package allows you to store almost any struct with dynamodb.
+// Each exported struct field becomes a member of the object unless
+// the field's tag is "-".
+//
+// Default attribute name is the struct field name but can be specified
+// in the struct field's tag value. The "dynamo" key in
+// the struct field's tag value is the attribute name,
+// followed by an optional comma and options. Examples:
+//
+//   // Field is ignored by this package.
+//   Field int `dynamo:"-"`
+//
+//   // Field appears in table as attribute "myName".
+//   Field int `dynamo:"myName"`
+//
+//   // Field is considered as an hash or range key in table.
+//   Field string `dynamo:",hash"`
+//   Field int    `dynamo:",range"`
+//
 package dynamodb
 
 import (
@@ -51,13 +72,14 @@ func (s *Service) Do(action string, body interface{}, a interface{}) error {
 		json.NewDecoder(resp.Body).Decode(&e)
 		return errors.New(fmt.Sprintf("%s: %s", e.Type, e.Message))
 	}
-	
+
 	if a == nil {
 		return nil
 	}
 	return json.NewDecoder(resp.Body).Decode(a)
 }
 
+// Get the corresponding item from the given table.
 func (s *Service) Get(tablename string, item interface{}) error {
 	keys, err := marshall(item, true)
 	if err != nil {
@@ -80,10 +102,12 @@ func (s *Service) Get(tablename string, item interface{}) error {
 	return unmarshall(resp.Item, item)
 }
 
+// Get the corresponding item from the given table.
 func Get(tablename string, item interface{}) error {
 	return DefaultService.Get(tablename, item)
 }
 
+// Create or update the item in the given table.
 func (s *Service) Put(tablename string, item interface{}) error {
 	values, err := marshall(item, false)
 	if err != nil {
@@ -99,10 +123,12 @@ func (s *Service) Put(tablename string, item interface{}) error {
 	return s.Do("PutItem", body, nil)
 }
 
+// Create or update the item in the given table.
 func Put(tablename string, item interface{}) error {
 	return DefaultService.Put(tablename, item)
 }
 
+// Deletes corresponding item in the given table.
 func (s *Service) Delete(tablename string, item interface{}) error {
 	keys, err := marshall(item, true)
 	if err != nil {
@@ -118,6 +144,7 @@ func (s *Service) Delete(tablename string, item interface{}) error {
 	return s.Do("DeleteItem", body, nil)
 }
 
+// Deletes corresponding item in the given table.
 func Delete(tablename string, item interface{}) error {
 	return DefaultService.Delete(tablename, item)
 }
