@@ -27,6 +27,7 @@ import (
 	"errors"
 	"fmt"
 	aws "github.com/bmizerany/aws4"
+	"github.com/cyberdelia/dynamodb/types"
 	"net/http"
 )
 
@@ -81,25 +82,25 @@ func (s *Service) Do(action string, body interface{}, a interface{}) error {
 
 // Get the corresponding item from the given table.
 func (s *Service) Get(tableName string, item interface{}) error {
-	keys, err := Marshal(item, true)
+	keys, err := types.Marshal(item, true)
 	if err != nil {
 		return err
 	}
 	body := struct {
 		TableName string
-		Key       AttributeValue
+		Key       types.AttributeValue
 	}{
 		TableName: tableName,
 		Key:       keys,
 	}
 	var resp struct {
-		Item AttributeValue
+		Item types.AttributeValue
 	}
 	err = s.Do("GetItem", body, &resp)
 	if err != nil {
 		return err
 	}
-	return Unmarshal(resp.Item, item)
+	return types.Unmarshal(resp.Item, item)
 }
 
 // Get the corresponding item from the given table.
@@ -109,13 +110,13 @@ func Get(tableName string, item interface{}) error {
 
 // Create or replace the item in the given table.
 func (s *Service) Put(tableName string, item interface{}) error {
-	values, err := Marshal(item, false)
+	values, err := types.Marshal(item, false)
 	if err != nil {
 		return err
 	}
 	body := struct {
 		TableName string
-		Item      AttributeValue
+		Item      types.AttributeValue
 	}{
 		TableName: tableName,
 		Item:      values,
@@ -130,13 +131,13 @@ func Put(tableName string, item interface{}) error {
 
 // Deletes corresponding item in the given table.
 func (s *Service) Delete(tableName string, item interface{}) error {
-	keys, err := Marshal(item, true)
+	keys, err := types.Marshal(item, true)
 	if err != nil {
 		return nil
 	}
 	body := struct {
 		TableName string
-		Key       AttributeValue
+		Key       types.AttributeValue
 	}{
 		TableName: tableName,
 		Key:       keys,
@@ -151,27 +152,27 @@ func Delete(tableName string, item interface{}) error {
 
 // Creates table corresponding to the given item.
 func (s *Service) CreateTable(tableName string, item interface{}, read, write int) error {
-	definitions, err := attributeDefinitions(item)
+	definitions, err := types.Definitions(item)
 	if err != nil {
 		return err
 	}
-	schema, err := keySchema(item)
+	keys, err := types.Keys(item)
 	if err != nil {
 		return err
 	}
 	body := struct {
 		TableName             string
-		ProvisionedThroughput ProvisionedThroughput
-		AttributeDefinitions  AttributeDefinitions
-		KeySchema             KeySchema
+		ProvisionedThroughput types.ProvisionedThroughput
+		AttributeDefinitions  types.AttributeDefinitions
+		KeySchema             types.KeySchema
 	}{
 		TableName: tableName,
-		ProvisionedThroughput: ProvisionedThroughput{
+		ProvisionedThroughput: types.ProvisionedThroughput{
 			ReadCapacityUnits:  read,
 			WriteCapacityUnits: write,
 		},
 		AttributeDefinitions: definitions,
-		KeySchema:            schema,
+		KeySchema:            keys,
 	}
 	return s.Do("CreateTable", body, nil)
 }

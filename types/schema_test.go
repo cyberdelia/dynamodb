@@ -1,4 +1,4 @@
-package dynamodb
+package types
 
 import (
 	"reflect"
@@ -11,7 +11,7 @@ type schema struct {
 }
 
 func TestKeySchema(t *testing.T) {
-	s, err := keySchema(&schema{})
+	s, err := Keys(&schema{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -31,7 +31,7 @@ func TestKeySchema(t *testing.T) {
 }
 
 func TestAttributeDefinitions(t *testing.T) {
-	d, err := attributeDefinitions(&schema{})
+	d, err := Definitions(&schema{})
 	if err != nil {
 		t.Fatal(err)
 	}

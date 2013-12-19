@@ -1,4 +1,4 @@
-package dynamodb
+package types
 
 import (
 	"fmt"
@@ -24,7 +24,7 @@ type ProvisionedThroughput struct {
 	WriteCapacityUnits int
 }
 
-func attributeDefinitions(v interface{}) (d AttributeDefinitions, err error) {
+func Definitions(v interface{}) (d AttributeDefinitions, err error) {
 	s := reflect.Indirect(reflect.ValueOf(v))
 	if s.Kind() != reflect.Struct {
 		return nil, ErrValueStruct
@@ -72,7 +72,7 @@ func typeGuess(t reflect.Type) string {
 	}
 }
 
-func keySchema(v interface{}) (k KeySchema, err error) {
+func Keys(v interface{}) (k KeySchema, err error) {
 	s := reflect.Indirect(reflect.ValueOf(v))
 	if s.Kind() != reflect.Struct {
 		return nil, ErrValueStruct
