@@ -24,6 +24,17 @@ type ProvisionedThroughput struct {
 	WriteCapacityUnits int
 }
 
+type Table struct {
+	AttributeDefinitions  AttributeDefinitions
+	CreationDateTime      float64
+	ItemCount             int
+	KeySchema             KeySchema
+	ProvisionedThroughput ProvisionedThroughput
+	TableName             string
+	TableSizeBytes        int
+	TableStatus           string
+}
+
 func Definitions(v interface{}) (d AttributeDefinitions, err error) {
 	s := reflect.Indirect(reflect.ValueOf(v))
 	if s.Kind() != reflect.Struct {

@@ -200,24 +200,24 @@ func ListTables() ([]string, error) {
 }
 
 // Describe given table.
-func (s *Service) DescribeTable(tableName string) (json.RawMessage, error) {
+func (s *Service) DescribeTable(tableName string) (types.Table, error) {
 	body := struct {
 		TableName string
 	}{
 		TableName: tableName,
 	}
 	var resp struct {
-		Table json.RawMessage
+		Table types.Table
 	}
 	err := s.Do("DescribeTable", body, &resp)
 	if err != nil {
-		return nil, err
+		return types.Table{}, err
 	}
 	return resp.Table, nil
 }
 
 // Describe given table.
-func DescribeTable(tableName string) (json.RawMessage, error) {
+func DescribeTable(tableName string) (types.Table, error) {
 	return DefaultService.DescribeTable(tableName)
 }
 
