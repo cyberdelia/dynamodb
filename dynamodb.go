@@ -89,7 +89,7 @@ func (s *Service) Get(tableName string, item interface{}) error {
 		TableName string
 		Key       AttributeValue
 	}{
-		TableName: tablename,
+		TableName: tableName,
 		Key:       keys,
 	}
 	var resp struct {
@@ -103,8 +103,8 @@ func (s *Service) Get(tableName string, item interface{}) error {
 }
 
 // Get the corresponding item from the given table.
-func Get(tablename string, item interface{}) error {
-	return DefaultService.Get(tablename, item)
+func Get(tableName string, item interface{}) error {
+	return DefaultService.Get(tableName, item)
 }
 
 // Create or replace the item in the given table.
@@ -117,15 +117,15 @@ func (s *Service) Put(tableName string, item interface{}) error {
 		TableName string
 		Item      AttributeValue
 	}{
-		TableName: tablename,
+		TableName: tableName,
 		Item:      values,
 	}
 	return s.Do("PutItem", body, nil)
 }
 
 // Create or replace the item in the given table.
-func Put(tablename string, item interface{}) error {
-	return DefaultService.Put(tablename, item)
+func Put(tableName string, item interface{}) error {
+	return DefaultService.Put(tableName, item)
 }
 
 // Deletes corresponding item in the given table.
@@ -138,28 +138,28 @@ func (s *Service) Delete(tableName string, item interface{}) error {
 		TableName string
 		Key       AttributeValue
 	}{
-		TableName: tablename,
+		TableName: tableName,
 		Key:       keys,
 	}
 	return s.Do("DeleteItem", body, nil)
 }
 
 // Deletes corresponding item in the given table.
-func Delete(tablename string, item interface{}) error {
-	return DefaultService.Delete(tablename, item)
+func Delete(tableName string, item interface{}) error {
+	return DefaultService.Delete(tableName, item)
 }
 
 // Deletes the given table.
-func (s *Service) DeleteTable(tablename string) error {
+func (s *Service) DeleteTable(tableName string) error {
 	body := struct {
 		TableName string
 	}{
-		TableName: tablename,
+		TableName: tableName,
 	}
 	return s.Do("DeleteTable", body, nil)
 }
 
 // Deletes the given table.
-func DeleteTable(tablename string) error {
-	return DefaultService.DeleteTable(tablename)
+func DeleteTable(tableName string) error {
+	return DefaultService.DeleteTable(tableName)
 }
