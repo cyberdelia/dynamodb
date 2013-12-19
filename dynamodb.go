@@ -80,26 +80,26 @@ func (s *Service) Do(action string, body interface{}, a interface{}) error {
 }
 
 // Get the corresponding item from the given table.
-func (s *Service) Get(tablename string, item interface{}) error {
-	keys, err := marshall(item, true)
+func (s *Service) Get(tableName string, item interface{}) error {
+	keys, err := Marshal(item, true)
 	if err != nil {
 		return err
 	}
 	body := struct {
 		TableName string
-		Key       attributeValue
+		Key       AttributeValue
 	}{
 		TableName: tablename,
 		Key:       keys,
 	}
 	var resp struct {
-		Item attributeValue
+		Item AttributeValue
 	}
 	err = s.Do("GetItem", body, &resp)
 	if err != nil {
 		return err
 	}
-	return unmarshall(resp.Item, item)
+	return Unmarshal(resp.Item, item)
 }
 
 // Get the corresponding item from the given table.
@@ -108,14 +108,14 @@ func Get(tablename string, item interface{}) error {
 }
 
 // Create or replace the item in the given table.
-func (s *Service) Put(tablename string, item interface{}) error {
-	values, err := marshall(item, false)
+func (s *Service) Put(tableName string, item interface{}) error {
+	values, err := Marshal(item, false)
 	if err != nil {
 		return err
 	}
 	body := struct {
 		TableName string
-		Item      attributeValue
+		Item      AttributeValue
 	}{
 		TableName: tablename,
 		Item:      values,
@@ -129,14 +129,14 @@ func Put(tablename string, item interface{}) error {
 }
 
 // Deletes corresponding item in the given table.
-func (s *Service) Delete(tablename string, item interface{}) error {
-	keys, err := marshall(item, true)
+func (s *Service) Delete(tableName string, item interface{}) error {
+	keys, err := Marshal(item, true)
 	if err != nil {
 		return nil
 	}
 	body := struct {
 		TableName string
-		Key       attributeValue
+		Key       AttributeValue
 	}{
 		TableName: tablename,
 		Key:       keys,

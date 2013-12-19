@@ -3,6 +3,7 @@ package dynamodb
 import (
 	"reflect"
 	"testing"
+	"time"
 )
 
 type structTest struct {
@@ -14,18 +15,19 @@ type structTest struct {
 	StringArray []string
 	Blob        []byte
 	BlobArray   [][]byte
+	Time        time.Time
 }
 
 var marshallTests = []struct {
 	item  structTest
-	value attributeValue
+	value AttributeValue
 }{
 	{
 		structTest{
 			Int:      8,
 			IntArray: []int{8, 12},
 		},
-		attributeValue{
+		AttributeValue{
 			"Int": {
 				"N": "8",
 			},
@@ -39,7 +41,7 @@ var marshallTests = []struct {
 			Float:      8.12,
 			FloatArray: []float64{8.12, 12.8},
 		},
-		attributeValue{
+		AttributeValue{
 			"Float": {
 				"N": "8.12",
 			},
@@ -53,7 +55,7 @@ var marshallTests = []struct {
 			String:      "abc",
 			StringArray: []string{"a", "b"},
 		},
-		attributeValue{
+		AttributeValue{
 			"String": {
 				"S": "abc",
 			},
@@ -69,7 +71,7 @@ var marshallTests = []struct {
 				{'a', 'b', 'c'}, {'d', 'e', 'f'},
 			},
 		},
-		attributeValue{
+		AttributeValue{
 			"Blob": {
 				"B": "abc",
 			},
@@ -78,11 +80,21 @@ var marshallTests = []struct {
 			},
 		},
 	},
+	{
+		structTest{
+			Time: time.Date(2013, 12, 12, 17, 55, 30, 0, time.UTC),
+		},
+		AttributeValue{
+			"Time": {
+				"S": "2013-12-12T17:55:30Z",
+			},
+		},
+	},
 }
 
 func TestMarshall(t *testing.T) {
 	for _, e := range marshallTests {
-		v, err := marshall(e.item, false)
+		v, err := Marshal(e.item, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -95,7 +107,7 @@ func TestMarshall(t *testing.T) {
 func TestUnmarshall(t *testing.T) {
 	for _, e := range marshallTests {
 		var item structTest
-		err := unmarshall(e.value, &item)
+		err := Unmarshal(e.value, &item)
 		if err != nil {
 			t.Fatal(err)
 		}

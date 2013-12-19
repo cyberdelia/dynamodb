@@ -1,11 +1,13 @@
 package dynamodb
 
 import (
+	"encoding"
 	"errors"
 	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var (
@@ -13,15 +15,18 @@ var (
 	ErrValueStruct  = errors.New("dynamodb: value is not a struct")
 )
 
-type attributeValue map[string]map[string]interface{}
+var textMarshalerType = reflect.TypeOf(new(encoding.TextMarshaler)).Elem()
+var textUnmarshalerType = reflect.TypeOf(new(encoding.TextUnmarshaler)).Elem()
 
-func marshall(v interface{}, keys bool) (attributeValue, error) {
+type AttributeValue map[string]map[string]interface{}
+
+func Marshal(v interface{}, keys bool) (AttributeValue, error) {
 	s := reflect.Indirect(reflect.ValueOf(v))
 	if s.Kind() != reflect.Struct {
 		return nil, ErrValueStruct
 	}
 	t := s.Type()
-	values := make(attributeValue)
+	values := make(AttributeValue)
 	for i := 0; i < s.NumField(); i++ {
 		f := s.Field(i)
 		ft := t.Field(i)
@@ -38,8 +43,8 @@ func marshall(v interface{}, keys bool) (attributeValue, error) {
 			// Ignore non-keys field if asking only for keys
 			continue
 		}
-		marshaller := typeMarshaller(f.Type())
-		k, v := marshaller(f)
+		marshaler := typeMarshaler(f.Type())
+		k, v := marshaler(f)
 		values[name] = map[string]interface{}{
 			k: v,
 		}
@@ -47,74 +52,77 @@ func marshall(v interface{}, keys bool) (attributeValue, error) {
 	return values, nil
 }
 
-type marshallFunc func(v reflect.Value) (string, interface{})
+type marshalFunc func(v reflect.Value) (string, interface{})
 
-func typeMarshaller(t reflect.Type) marshallFunc {
+func typeMarshaler(t reflect.Type) marshalFunc {
+	if t.Implements(textMarshalerType) {
+		return textMarshaler
+	}
 	switch t.Kind() {
 	case reflect.Bool:
-		return boolMarshaller
+		return boolMarshaler
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return intMarshaller
+		return intMarshaler
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		return uintMarshaller
+		return uintMarshaler
 	case reflect.Float32:
-		return float32Marshaller
+		return float32Marshaler
 	case reflect.Float64:
-		return float64Marshaller
+		return float64Marshaler
 	case reflect.String:
-		return stringMarshaller
+		return stringMarshaler
 	case reflect.Slice:
-		return newSliceMarshaller(t)
+		return newSliceMarshaler(t)
 	case reflect.Array:
-		return newArrayMarshaller(t)
+		return newArrayMarshaler(t)
 	default:
 		panic(fmt.Sprintf("dynamodb: %s type is not supported", t.Kind()))
 	}
 }
 
-func boolMarshaller(v reflect.Value) (string, interface{}) {
+func boolMarshaler(v reflect.Value) (string, interface{}) {
 	return "S", strconv.FormatBool(v.Bool())
 }
 
-func intMarshaller(v reflect.Value) (string, interface{}) {
+func intMarshaler(v reflect.Value) (string, interface{}) {
 	return "N", strconv.FormatInt(v.Int(), 10)
 }
 
-func uintMarshaller(v reflect.Value) (string, interface{}) {
+func uintMarshaler(v reflect.Value) (string, interface{}) {
 	return "N", strconv.FormatUint(v.Uint(), 10)
 }
 
-func float32Marshaller(v reflect.Value) (string, interface{}) {
+func float32Marshaler(v reflect.Value) (string, interface{}) {
 	return "N", strconv.FormatFloat(v.Float(), 'f', -1, 32)
 }
 
-func float64Marshaller(v reflect.Value) (string, interface{}) {
+func float64Marshaler(v reflect.Value) (string, interface{}) {
 	return "N", strconv.FormatFloat(v.Float(), 'f', -1, 64)
 }
 
-func stringMarshaller(v reflect.Value) (string, interface{}) {
+func stringMarshaler(v reflect.Value) (string, interface{}) {
 	return "S", v.String()
 }
 
-func byteMarshaller(v reflect.Value) (string, interface{}) {
+func byteMarshaler(v reflect.Value) (string, interface{}) {
 	return "B", string(v.Bytes())
 }
 
-func newSliceMarshaller(t reflect.Type) marshallFunc {
+func newSliceMarshaler(t reflect.Type) marshalFunc {
 	if t.Elem().Kind() == reflect.Uint8 {
-		return byteMarshaller
+		return byteMarshaler
 	}
-	return newArrayMarshaller(t)
+	return newArrayMarshaler(t)
 }
 
-func newArrayMarshaller(t reflect.Type) marshallFunc {
-	marshaller := typeMarshaller(t.Elem())
+func newArrayMarshaler(t reflect.Type) marshalFunc {
+	marshaler := typeMarshaler(t.Elem())
 	return func(v reflect.Value) (string, interface{}) {
 		var array []string
 		var kind string
 		n := v.Len()
 		for i := 0; i < n; i++ {
-			k, e := marshaller(v.Index(i))
+			k, e := marshaler(v.Index(i))
 			array = append(array, e.(string))
 			kind = k
 		}
@@ -122,7 +130,13 @@ func newArrayMarshaller(t reflect.Type) marshallFunc {
 	}
 }
 
-func unmarshall(a attributeValue, v interface{}) error {
+func textMarshaler(v reflect.Value) (string, interface{}) {
+	m := v.Interface().(encoding.TextMarshaler)
+	b, _ := m.MarshalText()
+	return "S", string(b)
+}
+
+func Unmarshal(a AttributeValue, v interface{}) error {
 	rv := reflect.ValueOf(v)
 	if rv.Kind() != reflect.Ptr || rv.IsNil() {
 		return ErrValuePointer
@@ -149,9 +163,9 @@ func unmarshall(a attributeValue, v interface{}) error {
 			// Field not present in attributes values
 			continue
 		}
-		unmarshaller := typeUnmarshaller(f.Type())
+		unmarshaler := typeUnmarshaler(f.Type())
 		for _, v := range values {
-			fv, err := unmarshaller(reflect.ValueOf(v))
+			fv, err := unmarshaler(reflect.ValueOf(v))
 			if err != nil {
 				return err
 			}
@@ -162,75 +176,78 @@ func unmarshall(a attributeValue, v interface{}) error {
 	return nil
 }
 
-type unmarshallFunc func(v reflect.Value) (reflect.Value, error)
+type unmarshalFunc func(v reflect.Value) (reflect.Value, error)
 
-func typeUnmarshaller(t reflect.Type) unmarshallFunc {
+func typeUnmarshaler(t reflect.Type) unmarshalFunc {
+	if reflect.PtrTo(t).Implements(textMarshalerType) {
+		return newTextUnmarshaler(t)
+	}
 	switch t.Kind() {
 	case reflect.Bool:
-		return boolUnmarshaller
+		return boolUnmarshaler
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return intUnmarshaller
+		return intUnmarshaler
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		return uintUnmarshaller
+		return uintUnmarshaler
 	case reflect.Float32, reflect.Float64:
-		return floatUnmarshaller
+		return floatUnmarshaler
 	case reflect.String:
-		return stringUnmarshaller
+		return stringUnmarshaler
 	case reflect.Slice:
-		return newSliceUnmarshaller(t)
+		return newSliceUnmarshaler(t)
 	case reflect.Array:
-		return newArrayUnmarshaller(t)
+		return newArrayUnmarshaler(t)
 	default:
 		panic(fmt.Sprintf("dynamodb: %s type is not supported", t.Kind()))
 	}
 }
 
-func boolUnmarshaller(v reflect.Value) (reflect.Value, error) {
+func boolUnmarshaler(v reflect.Value) (reflect.Value, error) {
 	b, err := strconv.ParseBool(v.String())
 	return reflect.ValueOf(b), err
 }
 
-func intUnmarshaller(v reflect.Value) (reflect.Value, error) {
+func intUnmarshaler(v reflect.Value) (reflect.Value, error) {
 	i, err := strconv.ParseInt(v.String(), 0, 64)
 	return reflect.ValueOf(i), err
 }
 
-func uintUnmarshaller(v reflect.Value) (reflect.Value, error) {
+func uintUnmarshaler(v reflect.Value) (reflect.Value, error) {
 	u, err := strconv.ParseUint(v.String(), 10, 64)
 	return reflect.ValueOf(u), err
 }
 
-func floatUnmarshaller(v reflect.Value) (reflect.Value, error) {
+func floatUnmarshaler(v reflect.Value) (reflect.Value, error) {
 	f, err := strconv.ParseFloat(v.String(), 64)
 	return reflect.ValueOf(f), err
 }
 
-func stringUnmarshaller(v reflect.Value) (reflect.Value, error) {
+func stringUnmarshaler(v reflect.Value) (reflect.Value, error) {
 	s := v.String()
 	return reflect.ValueOf(s), nil
 }
 
-func byteUnmarshaller(v reflect.Value) (reflect.Value, error) {
+func byteUnmarshaler(v reflect.Value) (reflect.Value, error) {
 	b := []byte(v.String())
 	return reflect.ValueOf(b), nil
 }
 
-func newSliceUnmarshaller(t reflect.Type) unmarshallFunc {
+func newSliceUnmarshaler(t reflect.Type) unmarshalFunc {
 	if t.Elem().Kind() == reflect.Uint8 {
-		return byteUnmarshaller
+		return byteUnmarshaler
 	}
-	return newArrayUnmarshaller(t)
+	return newArrayUnmarshaler(t)
 }
 
-func newArrayUnmarshaller(t reflect.Type) unmarshallFunc {
+func newArrayUnmarshaler(t reflect.Type) unmarshalFunc {
 	ft := t.Elem()
 	st := reflect.SliceOf(ft)
-	unmarshaller := typeUnmarshaller(ft)
+	unmarshaler := typeUnmarshaler(ft)
 	return func(v reflect.Value) (reflect.Value, error) {
 		n := v.Len()
 		s := reflect.MakeSlice(st, 0, 0)
 		for i := 0; i < n; i++ {
-			value, err := unmarshaller(v.Index(i))
+			value, err := unmarshaler(v.Index(i))
 			if err != nil {
 				return s, err
 			}
@@ -240,7 +257,22 @@ func newArrayUnmarshaller(t reflect.Type) unmarshallFunc {
 	}
 }
 
+func newTextUnmarshaler(t reflect.Type) unmarshalFunc {
+	n := reflect.New(t).Interface().(encoding.TextUnmarshaler)
+	return func(v reflect.Value) (reflect.Value, error) {
+		err := n.UnmarshalText([]byte(v.String()))
+		ptr := reflect.ValueOf(n)
+		return reflect.Indirect(ptr), err
+	}
+}
+
+var timeType = reflect.TypeOf(time.Time{})
+
 func isEmptyValue(v reflect.Value) bool {
+	if v.Type() == timeType {
+		t := v.Interface().(time.Time)
+		return t.IsZero()
+	}
 	switch v.Kind() {
 	case reflect.Array, reflect.Map, reflect.Slice, reflect.String:
 		return v.Len() == 0
