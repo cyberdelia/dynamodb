@@ -86,15 +86,15 @@ func (s *Service) Get(tableName string, item interface{}) error {
 	if err != nil {
 		return err
 	}
+	var resp struct {
+		Item types.AttributeValue
+	}
 	body := struct {
 		TableName string
 		Key       types.AttributeValue
 	}{
 		TableName: tableName,
 		Key:       keys,
-	}
-	var resp struct {
-		Item types.AttributeValue
 	}
 	err = s.Do("GetItem", body, &resp)
 	if err != nil {
@@ -150,6 +150,70 @@ func Delete(tableName string, item interface{}) error {
 	return DefaultService.Delete(tableName, item)
 }
 
+// Return all items in the given table.
+func (s *Service) All(tableName string, item interface{}) (interface{}, error) {
+	var items []types.AttributeValue
+	var resp struct {
+		Items            []types.AttributeValue
+		LastEvaluatedKey types.AttributeValue
+	}
+	for {
+		body := struct {
+			TableName         string
+			ExclusiveStartKey types.AttributeValue
+		}{
+			TableName:         tableName,
+			ExclusiveStartKey: resp.LastEvaluatedKey,
+		}
+		if err := s.Do("Scan", body, &resp); err != nil {
+			return nil, err
+		}
+		items = append(items, resp.Items...)
+		if resp.LastEvaluatedKey == nil {
+			break
+		}
+	}
+	return types.MakeSlice(items, item)
+}
+
+// Return all items in the given table.
+func All(tableName string, item interface{}) (interface{}, error) {
+	return DefaultService.All(tableName, item)
+}
+
+// Return given attributes for all item in the given table.
+func (s *Service) Pluck(tableName string, item interface{}, attrs ...string) (interface{}, error) {
+	var items []types.AttributeValue
+	var resp struct {
+		Items            []types.AttributeValue
+		LastEvaluatedKey types.AttributeValue
+	}
+	for {
+		body := struct {
+			TableName         string
+			ExclusiveStartKey types.AttributeValue
+			AttributesToGet   []string
+		}{
+			TableName:         tableName,
+			ExclusiveStartKey: resp.LastEvaluatedKey,
+			AttributesToGet:   attrs,
+		}
+		if err := s.Do("Scan", body, &resp); err != nil {
+			return nil, err
+		}
+		items = append(items, resp.Items...)
+		if resp.LastEvaluatedKey == nil {
+			break
+		}
+	}
+	return types.MakeSlice(items, item)
+}
+
+// Return given attributes for all item in the given table.
+func Pluck(tableName string, item interface{}, attrs ...string) (interface{}, error) {
+	return DefaultService.Pluck(tableName, item, attrs...)
+}
+
 // Creates table corresponding to the given item.
 func (s *Service) CreateTable(tableName string, item interface{}, read, write int) error {
 	definitions, err := types.Definitions(item)
@@ -201,13 +265,13 @@ func ListTables() ([]string, error) {
 
 // Describe given table.
 func (s *Service) DescribeTable(tableName string) (types.Table, error) {
+	var resp struct {
+		Table types.Table
+	}
 	body := struct {
 		TableName string
 	}{
 		TableName: tableName,
-	}
-	var resp struct {
-		Table types.Table
 	}
 	err := s.Do("DescribeTable", body, &resp)
 	if err != nil {

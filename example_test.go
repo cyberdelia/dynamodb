@@ -35,6 +35,26 @@ func ExamplePut() {
 	}
 }
 
+func ExampleAll() {
+	items, err := dynamodb.All("papers", &Paper{})
+	if err != nil {
+		// ...
+	}
+	papers := items.([]*Paper)
+	fmt.Println(papers)
+}
+
+func ExamplePluck() {
+	items, err := dynamodb.Pluck("papers", &Paper{}, "title", "year")
+	if err != nil {
+		// ...
+	}
+	for _, paper := range items.([]*Paper) {
+		fmt.Println(paper.Title)
+	}
+
+}
+
 func ExampleDelete() {
 	paper := &Paper{
 		Title: "Dynamo: Amazon’s Highly Available Key-value Store",

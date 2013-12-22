@@ -11,6 +11,7 @@ import (
 )
 
 var (
+	ErrNilValue     = errors.New("dynamodb: value is nil")
 	ErrValuePointer = errors.New("dynamodb: value is not a pointer")
 	ErrValueStruct  = errors.New("dynamodb: value is not a struct")
 )
@@ -140,8 +141,11 @@ func textMarshaler(v reflect.Value) (string, interface{}) {
 // Unmarshall AttributeValue into struct.
 func Unmarshal(a AttributeValue, v interface{}) error {
 	rv := reflect.ValueOf(v)
-	if rv.Kind() != reflect.Ptr || rv.IsNil() {
+	if rv.Kind() != reflect.Ptr {
 		return ErrValuePointer
+	}
+	if rv.IsNil() {
+		return ErrNilValue
 	}
 	s := reflect.Indirect(rv)
 	if s.Kind() != reflect.Struct {
@@ -176,6 +180,19 @@ func Unmarshal(a AttributeValue, v interface{}) error {
 		}
 	}
 	return nil
+}
+
+func MakeSlice(a []AttributeValue, v interface{}) (interface{}, error) {
+	t := reflect.ValueOf(v).Type()
+	slice := reflect.MakeSlice(reflect.SliceOf(t), 0, 0)
+	for _, av := range a {
+		e := reflect.New(t.Elem())
+		if err := Unmarshal(av, e.Interface()); err != nil {
+			return nil, err
+		}
+		slice = reflect.Append(slice, e)
+	}
+	return slice.Interface(), nil
 }
 
 type unmarshalFunc func(v reflect.Value) (reflect.Value, error)

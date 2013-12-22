@@ -56,6 +56,23 @@ func TestPut(t *testing.T) {
 	}
 }
 
+func BenchmarkPut(b *testing.B) {
+	if testing.Short() {
+		b.Skip()
+	}
+	for i := 0; i < b.N; i++ {
+		err := Put("papers", &paper{
+			Title:   "Dynamo: Amazon’s Highly Available Key-value Store",
+			Year:    2007,
+			Score:   1.5,
+			Authors: []string{"Giuseppe DeCandia", "Werner Vogels", "Deniz Hastorun"},
+		})
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
 func TestGet(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
@@ -70,6 +87,55 @@ func TestGet(t *testing.T) {
 	}
 	if item.Score != 1.5 {
 		t.Error("year don't match")
+	}
+}
+
+func BenchmarkGet(b *testing.B) {
+	if testing.Short() {
+		b.Skip()
+	}
+	item := &paper{
+		Title: "Dynamo: Amazon’s Highly Available Key-value Store",
+		Year:  2007,
+	}
+	for i := 0; i < b.N; i++ {
+		err := Get("papers", item)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func TestAll(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+	items, err := All("papers", &paper{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items.([]*paper)) < 1 {
+		t.Error("no items returned")
+	}
+}
+
+func TestPluck(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+	items, err := Pluck("papers", &paper{}, "year")
+	if err != nil {
+		t.Fatal(err)
+	}
+	papers := items.([]*paper)
+	if len(papers) < 1 {
+		t.Error("no items returned")
+	}
+	if papers[0].Title != "" {
+		t.Error("returned title")
+	}
+	if papers[0].Year == 0 {
+		t.Error("didn't return year")
 	}
 }
 
