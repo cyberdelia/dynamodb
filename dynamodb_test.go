@@ -152,6 +152,50 @@ func TestDelete(t *testing.T) {
 	}
 }
 
+func TestBatchPut(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+	papers := []*paper{
+		{
+			Title: "Dynamo: Amazon’s Highly Available Key-value Store",
+			Year:  2007,
+			Score: 2.5,
+		},
+		{
+			Title: "The Chubby lock service for loosely-coupled distributed systems",
+			Year:  2006,
+			Score: 2.5,
+		},
+	}
+	err := BatchPut("papers", papers)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestBatchDelete(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+	papers := []*paper{
+		{
+			Title: "Dynamo: Amazon’s Highly Available Key-value Store",
+			Year:  2007,
+			Score: 2.5,
+		},
+		{
+			Title: "The Chubby lock service for loosely-coupled distributed systems",
+			Year:  2006,
+			Score: 2.5,
+		},
+	}
+	err := BatchDelete("papers", papers)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 // func TestDeleteTable(t *testing.T) {
 // 	if testing.Short() {
 // 		t.Skip()

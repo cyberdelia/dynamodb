@@ -35,6 +35,21 @@ type Table struct {
 	TableStatus           string
 }
 
+type WriteRequests map[string][]*WriteRequest
+
+type WriteRequest struct {
+	PutRequest    *PutRequest
+	DeleteRequest *DeleteRequest
+}
+
+type DeleteRequest struct {
+	Key AttributeValue
+}
+
+type PutRequest struct {
+	Item AttributeValue
+}
+
 func Definitions(v interface{}) (d AttributeDefinitions, err error) {
 	s := reflect.Indirect(reflect.ValueOf(v))
 	if s.Kind() != reflect.Struct {

@@ -29,6 +29,7 @@ import (
 	aws "github.com/bmizerany/aws4"
 	"github.com/cyberdelia/dynamodb/types"
 	"net/http"
+	"reflect"
 )
 
 var (
@@ -129,6 +130,34 @@ func Put(tableName string, item interface{}) error {
 	return DefaultService.Put(tableName, item)
 }
 
+func (s *Service) BatchPut(tableName string, items interface{}) error {
+	rv := reflect.ValueOf(items)
+	requests := make(types.WriteRequests)
+	writes := make([]*types.WriteRequest, 0)
+	for i := 0; i < rv.Len(); i++ {
+		value, err := types.Marshal(rv.Index(i).Interface(), false)
+		if err != nil {
+			return err
+		}
+		writes = append(writes, &types.WriteRequest{
+			PutRequest: &types.PutRequest{
+				Item: value,
+			},
+		})
+	}
+	requests[tableName] = writes
+	body := struct {
+		RequestItems types.WriteRequests
+	}{
+		RequestItems: requests,
+	}
+	return s.Do("BatchWriteItem", body, nil)
+}
+
+func BatchPut(tableName string, items interface{}) error {
+	return DefaultService.BatchPut(tableName, items)
+}
+
 // Deletes corresponding item in the given table.
 func (s *Service) Delete(tableName string, item interface{}) error {
 	keys, err := types.Marshal(item, true)
@@ -148,6 +177,34 @@ func (s *Service) Delete(tableName string, item interface{}) error {
 // Deletes corresponding item in the given table.
 func Delete(tableName string, item interface{}) error {
 	return DefaultService.Delete(tableName, item)
+}
+
+func (s *Service) BatchDelete(tableName string, items interface{}) error {
+	rv := reflect.ValueOf(items)
+	requests := make(types.WriteRequests)
+	deletes := make([]*types.WriteRequest, 0)
+	for i := 0; i < rv.Len(); i++ {
+		value, err := types.Marshal(rv.Index(i).Interface(), true)
+		if err != nil {
+			return err
+		}
+		deletes = append(deletes, &types.WriteRequest{
+			DeleteRequest: &types.DeleteRequest{
+				Key: value,
+			},
+		})
+	}
+	requests[tableName] = deletes
+	body := struct {
+		RequestItems types.WriteRequests
+	}{
+		RequestItems: requests,
+	}
+	return s.Do("BatchWriteItem", body, nil)
+}
+
+func BatchDelete(tableName string, items interface{}) error {
+	return DefaultService.BatchDelete(tableName, items)
 }
 
 // Return all items in the given table.
