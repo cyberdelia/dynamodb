@@ -66,6 +66,8 @@ func (s *Service) Do(action string, body interface{}, a interface{}) error {
 		return err
 	}
 
+	defer resp.Body.Close()
+
 	if status := resp.StatusCode; status != 200 {
 		var e struct {
 			Message string
